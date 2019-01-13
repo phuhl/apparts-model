@@ -1,0 +1,11 @@
+#emacs backup files
+*~
+*\#
+.\#*
+
+#project related files
+npm-debug.log
+node_modules/
+
+#tern files
+.tern-port
