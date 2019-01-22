@@ -19,6 +19,6 @@
   "author": "Philipp Uhl",
   "license": "UNLICENSED",
   "dependencies": {
-    "apparts-types": "git+ssh://git@ph-uhl.com:Apparts/apparts-types.git#semver:^1.0.0"
+    "apparts-types": "git+ssh://git@ph-uhl.com:Apparts/apparts-types.git#semver:^1.0.1"
   }
 }
