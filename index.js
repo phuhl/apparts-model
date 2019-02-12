@@ -2,7 +2,7 @@
 
 //const Errors = require('apparts-error');
 const User = require('./user.js');
-const type = require('apparts-types');
+const type = require('apparts-types').types;
 
 function NotUnique(){
   this.message = `[Model] Object not unique. E4`;
@@ -205,9 +205,9 @@ Collection: "${this._collection}", Keys: "${this._keys}", Id: "${ids}"`;
         .catch(err => {
           // MONGO
           if(err._code === 1){
-            return Promise.reject();
+            return Promise.reject(new DoesExist());
           } else {
-            throw err;
+            throw "[Model] Unexpected error in storeUnique: " + err;
           }
         });
     }
