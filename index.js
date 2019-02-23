@@ -53,9 +53,9 @@ module.exports = (dbs) =>
       }
     }
 
-    load(filter, limit){
+    load(filter, limit, order){
       return this._load(
-        dbs.collection(this._collection).find(filter, limit, this._types));
+        dbs.collection(this._collection).find(filter, limit, order));
     }
 
     _load(f){
@@ -182,13 +182,17 @@ Collection: "${this._collection}", Keys: "${this._keys}", Id: "${ids}"`;
       if(!this._checkTypes()){
         throw "[Model] type-constraints not met, E42" + this.contents;
       }
+      let withId = false;
+      if(this.contents[0]._id !== undefined){
+        withId = true;
+      }
       // MONGO
       this.contents =
         this.contents.map(
           // MONGO
           c => ({ ...c, _id: c._id || dbs.newId()}));
       return dbs.collection(this._collection)
-        .insert(this.contents)
+        .insert(this.contents, undefined, withId)
         .then((ids) => {
           if(ids){
             this.contents =
