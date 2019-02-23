@@ -149,7 +149,7 @@ Collection: "${this._collection}", Keys: "${this._keys}", Id: "${ids}"`;
 
     loadOne(filter){
       return this._loadOne(
-        dbs.collection(this._collection).find(filter, 2, this._types));
+        dbs.collection(this._collection).find(filter, 2));
     }
 
     _loadOne(f){
