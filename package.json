@@ -18,7 +18,7 @@
   ],
   "author": "Philipp Uhl",
   "license": "UNLICENSED",
-  "dependencies": {
+  "peerDependencies": {
     "apparts-types": "git+ssh://git@ph-uhl.com:Apparts/apparts-types.git#semver:^1.0.1"
   }
 }
