@@ -2,7 +2,7 @@
 
 //const Errors = require('apparts-error');
 const User = require('./user.js');
-const type = require('apparts-types').types;
+const type = require('apparts-types');
 
 function NotUnique(){
   this.message = `[Model] Object not unique. E4`;
@@ -308,7 +308,7 @@ Collection: "${this._collection}", Keys: "${this._keys}", Id: "${ids}"`;
           }
           let present = val !== undefined && val !== null;
           if((!present && !this._types[key].optional)
-             || (present && !type[this._types[key].type].check(val))){
+             || (present && !type.types[this._types[key].type].check(val))){
             console.log(key, val);
             return false;
           }
