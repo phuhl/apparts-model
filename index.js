@@ -2,7 +2,6 @@
 
 //const Errors = require('apparts-error');
 const User = require('./user.js');
-const type = require('apparts-types');
 
 function NotUnique(){
   this.message = `[Model] Object not unique. E4`;
@@ -17,9 +16,12 @@ function DoesExist(){
   this.toString = () => this.message;
 }
 
-module.exports = (dbs) =>
+module.exports = (dbs) => {
 
-  class Model {
+  // No idea why, but has to be here to be populated
+  const type = require('apparts-types');
+
+  return class Model {
     constructor(types, collection, contents){
       this._fromDB = false;
       this._collection = colprefix + collection;
@@ -373,6 +375,7 @@ Collection: "${this._collection}", Keys: "${this._keys}", Id: "${ids}"`;
       return retObj;
     }
   };
+};
 
 
 /*
