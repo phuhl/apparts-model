@@ -182,7 +182,8 @@ Collection: "${this._collection}", Keys: "${this._keys}", Id: "${ids}"`;
         return Promise.resolve();
       }
       if(!this._checkTypes()){
-        throw "[Model] type-constraints not met, E42" + this.contents;
+        throw "[Model] type-constraints not met, E42"
+          + JSON.stringify(this.contents);
       }
       let withId = false;
       if(this.contents[0]._id !== undefined){
