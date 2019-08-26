@@ -19,7 +19,7 @@ function DoesExist(){
 module.exports = (dbs) => {
 
   // No idea why, but has to be here to be populated
-  const type = require('apparts-types');
+  const type = require('@apparts/types');
 
   return class Model {
     constructor(types, collection, contents){
