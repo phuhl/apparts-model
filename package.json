@@ -1,5 +1,5 @@
 {
-  "name": "apparts-model",
+  "name": "@apparts/model",
   "version": "2.0.3",
   "description": "A model for reading and writing to the database. It stores data.",
   "main": "index.js",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@ph-uhl.com:Apparts/apparts-model.git"
+    "url": "git@github.com:phuhl/apparts-model.git"
   },
   "keywords": [
     "apparts",
