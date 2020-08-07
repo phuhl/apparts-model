@@ -1,5 +1,5 @@
 const { setup, teardown } = require("./tests/database");
-const useModel = require("./index.js");
+const { useModel } = require("./index.js");
 const { NotUnique, NotFound, DoesExist } = require("./errors");
 
 const SETUPDB = `

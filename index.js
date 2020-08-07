@@ -9,7 +9,7 @@ const USAGE = "\nUsage: useModel(<dbs>, <types>, <collection name>);\n\n";
 
 module.exports = {
   ...errors,
-  useModels(dbs, types, collection) {
+  useModel(dbs, types, collection) {
     if (typeof types !== "object") {
       throw new Error("[Model]: Type definition is not an object!" + USAGE);
     }

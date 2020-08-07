@@ -20,7 +20,7 @@ these classes by using them:
   };
 
   const useUser = (dbs) => {
-    const [Users, _User, NoUser] = useModels(dbs, types, "users");
+    const [Users, _User, NoUser] = useModel(dbs, types, "users");
 
     // You can extend the classes like this:
     class User extends _User {
