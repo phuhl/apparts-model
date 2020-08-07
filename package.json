@@ -36,7 +36,7 @@
     "@apparts/db": "^1.3.3",
     "@apparts/error": "^1.0.3",
     "@apparts/logger": "^1.0.0",
-    "@apparts/types": "^2.6.0",
+    "@apparts/types": "^2.6.1",
     "jest": "^26.2.2",
     "pg": "^8.3.0"
   }
