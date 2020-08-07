@@ -1,0 +1,109 @@
+#+TITLE: Apparts-Model
+#+DATE: [2020-08-06 Thu]
+#+AUTHOR: Philipp Uhl
+
+* Usage
+
+You can either work with one, multiple, or no elements. The respective
+classes are ~OneModel~, ~ManyModel~, and ~NoneModel~. You can extend
+these classes by using them:
+
+#+BEGIN_SRC js
+  const { useModel } = require("@apparts/model");
+
+
+  const types = {
+    _id: { type: "id", public: true, mapped: "id" }
+    optionalVal: { type: "string", optional: true },
+    createdOn: { type: "time", default: () => Date.now() },
+    fixedDefault: { type: "int", default: 7 },
+  };
+
+  const useUser = (dbs) => {
+    const [Users, _User, NoUser] = useModels(dbs, types, "users");
+
+    // You can extend the classes like this:
+    class User extends _User {
+      constructor(content) {
+        super(content);
+        // do something here
+      }
+      additionalFunc() {
+        return this.content;
+      }
+    }
+
+    return [Users, User, NoUser];
+  };
+#+END_SRC
+
+The extended classes can then be used:
+
+#+BEGIN_SRC js
+  // get dbs from "@apparts/db" somehow
+  const [,User] = useUser(dbs);
+
+  const peter = await new User({ optionalVal: "Peter"}).store();
+  console.log(peter.content); 
+  // => { _id: 1, optionalVal: "Peter", createdOn: 12345, fixedDefault: 7 }
+#+END_SRC
+
+** ManyModel
+
+_Values:_
+- ~contents~ :: Array, that contains the values. The values can be edited. To
+  save the changes, call ~update~.
+
+_Functions:_
+- ~constructor(contents)~ :: Constructor
+- ~async load(filter, limit, order)~ :: Load data
+- ~async loadByIds(ids, limit)~ :: Load data by IDs. For models with
+  only one key, you can use ~[<id1>, <id2>, ...]~, for a model with
+  multiple keys, you have to use ~{ <key1>: [ <id1>, ...], <key2>:
+  [<key2id1>, ...], ...}~.
+- ~async store()~ :: Saves to the database
+- ~async update()~ :: Updates the values, if you updated the contents.
+- ~length()~ :: Length of ~contents~
+- ~set(field, val)~ :: Set a field on all elements
+- ~setF(field, f)~ :: Set a field on all elements through a function,
+  that receives the element and returns the new value
+- ~async deleteAll()~ :: Delete all from the loaded collection from
+  the database
+- ~getPublic()~ :: Get the public representation (marked as public in
+  the types definition by the key ~public (bool)~).
+
+** OneModel
+
+_Values:_
+- ~content~ :: Object, that contains the values. The values can be edited. To
+  save the changes, call ~update~.
+
+_Functions:_
+- ~constructor(content)~ :: Constructor
+- ~async load(filter)~ :: Load data
+- ~async loadById(id)~ :: Load data by ID. For models with
+  only one key, you can use ~<id>~, for a model with
+  multiple keys, you have to use ~{ <key1>: <id>, <key2>: <key2id>, ... }~.
+- ~async store()~ :: Saves to the database
+- ~async update()~ :: Updates the values, if you updated the contents.
+- ~set(field, val)~ :: Set a field on all elements
+- ~async delete()~ :: Delete this element from the database
+- ~getPublic()~ :: Get the public representation (marked as public in
+  the types definition by the key ~public (bool)~).
+
+** NoneModel
+
+_Functions:_
+- ~constructor()~ :: Constructor
+- ~async loadNone(filter)~ :: Throws an ~DoesExist~ error, if something was
+  loaded, does nothing if nothing was loaded.
+
+** Errors
+
+- ~DoesExist~
+- ~NotFound~
+- ~NotUnique~
+
+#+BEGIN_SRC js
+  const { NotUnique, NotFound, DoesExist } = require("@apparts/model");
+#+END_SRC

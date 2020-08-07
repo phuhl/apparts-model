@@ -65,14 +65,6 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
       return this;
     }
 
-    async loadNone(filter) {
-      await this.load(filter);
-      if (this.contents.length > 0) {
-        throw new DoesExist();
-      }
-      return this;
-    }
-
     async store() {
       this.contents = await this._store(this.contents);
       return this;
