@@ -59,14 +59,27 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
         this.contents = await this._load(
           dbs
             .collection(this._collection)
-            .findByIds({ _id: ids.map((id) => dbs.toId(id)) }, limit)
+            .findByIds(
+              { [this._keys[0]]: ids.map((id) => dbs.toId(id)) },
+              limit
+            )
         );
       }
       return this;
     }
 
     async store() {
-      this.contents = await this._store(this.contents);
+      try {
+        this.contents = await this._store(this.contents);
+      } catch (err) {
+        // MONGO
+        if (err._code === 1) {
+          throw new NotUnique();
+        } else {
+          console.log(err);
+          throw new Error("[OneModel] Unexpected error in store: ");
+        }
+      }
       return this;
     }
 
@@ -93,9 +106,12 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
       if (this.length() == 0) {
         return;
       }
-      await dbs
-        .collection(this._collection)
-        .remove({ _id: { val: this.contents.map((c) => c._id), op: "in" } });
+      const filter = {};
+      for (const key of this._keys) {
+        filter[key] = { val: this.contents.map((c) => c[key]), op: "in" };
+      }
+      await dbs.collection(this._collection).remove(filter);
+      return this;
     }
 
     getPublic() {

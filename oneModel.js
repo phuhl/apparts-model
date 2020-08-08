@@ -59,7 +59,9 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
           )}", Id: "${JSON.stringify(id)}"`);
         }
         await this._loadOne(
-          dbs.collection(this._collection).findById({ _id: dbs.toId(id) })
+          dbs
+            .collection(this._collection)
+            .findById({ [this._keys[0]]: dbs.toId(id) })
         );
       }
       return this;
@@ -93,7 +95,9 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
     }
 
     async delete() {
-      await dbs.collection(this._collection).remove({ _id: this.content._id });
+      await dbs
+        .collection(this._collection)
+        .remove(this._getKeyFilter(this.content));
       return this;
     }
 

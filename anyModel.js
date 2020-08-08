@@ -12,13 +12,15 @@ module.exports = (dbs, types, collection) => {
       this._collection = collection;
       this._types = types;
       this._keys = Object.keys(types).filter((key) => types[key].key);
-      if (!types || !this._types._id || !this._types._id.key) {
-        throw new Error(
-          "[AnyModel] E41, No types given or types not well defined"
-        );
+      this._autos = Object.keys(types).filter((key) => types[key].auto);
+      if (!types) {
+        throw new Error("[AnyModel] No types given");
+      }
+      if (this._keys.length === 0) {
+        throw new Error("[AnyModel] Types not well defined: No key found");
       }
       if (!collection) {
-        throw new Error("[AnyModel] E23, No collection given");
+        throw new Error("[AnyModel] No collection given");
       }
     }
 
@@ -56,8 +58,9 @@ module.exports = (dbs, types, collection) => {
       if (!this._fromDB) {
         throw new Error("[AnyModel] update on non-loaded Model, E29");
       }
-      let newIds = contents.map((c) => c._id);
-      /*if (
+      /*
+        let newIds = contents.map((c) => c._id);
+        if (
         !(
           this._loadedIds.length === newIds.length &&
           this._loadedIds.every((v, i) => newIds[i] === v)
@@ -76,8 +79,26 @@ module.exports = (dbs, types, collection) => {
       }
     }
 
+    _removeAutos(c) {
+      const val = { ...c };
+      for (const auto of this._autos) {
+        delete val[auto];
+      }
+      return val;
+    }
+
+    _getKeyFilter(c) {
+      const filter = {};
+      for (const key of this._keys) {
+        filter[key] = c[key];
+      }
+      return filter;
+    }
+
     async _updateOne(c) {
-      await dbs.collection(this._collection).updateOne({ _id: c._id }, c);
+      await dbs
+        .collection(this._collection)
+        .updateOne(this._getKeyFilter(c), this._removeAutos(c));
     }
 
     _convertIds(c) {
@@ -100,25 +121,17 @@ module.exports = (dbs, types, collection) => {
       }
       if (!this._checkTypes(contents)) {
         throw new Error(
-          "[AnyModel] type-constraints not met, E42" + JSON.stringify(contents)
+          "[AnyModel] type-constraints not met: " + JSON.stringify(contents)
         );
       }
-      let withId = false;
-      if (contents[0]._id !== undefined) {
-        withId = true;
-      }
-      contents = contents.map((c) => ({
-        ...c,
-        _id: c._id || dbs.newId(),
-      }));
       const ids = await dbs
         .collection(this._collection)
-        .insert(contents, undefined, withId);
+        .insert(contents, this._autos, this._autos);
 
       if (ids) {
         contents = contents.map((c, i) => ({
           ...c,
-          _id: ids[i],
+          ...ids[i],
         }));
       }
       return contents;
@@ -127,7 +140,7 @@ module.exports = (dbs, types, collection) => {
     _checkTypes(contents) {
       for (let c of contents) {
         for (let key in this._types) {
-          if (key === "_id") {
+          if (this._autos.indexOf(key) !== -1) {
             continue;
           }
           let val = c[key];
@@ -156,7 +169,7 @@ module.exports = (dbs, types, collection) => {
       for (let key in types) {
         if (types[key].name) {
           if (hasName) {
-            throw new Error("[AnyModel] E45, Multiple Names specified");
+            throw new Error("[AnyModel] Multiple Names specified");
           }
           hasName = true;
         }
