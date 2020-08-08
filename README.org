@@ -13,10 +13,38 @@ these classes by using them:
 
 
   const types = {
-    _id: { type: "id", public: true, mapped: "id" }
-    optionalVal: { type: "string", optional: true },
-    createdOn: { type: "time", default: () => Date.now() },
-    fixedDefault: { type: "int", default: 7 },
+    id: { 
+      /* Types as defined by @apparts/types */
+      type: "id",
+      /* Will be shown in output of getPublic*/
+      public: true,  
+      /* Auto increment this field */
+      auto: true,    
+      /* This is a key. Combined keys are possible, too, by setting 
+         { key: true } on multiple fields. */
+      key: true 
+    }   
+    optionalVal: { 
+      type: "string", 
+      /* This field can be NULL */
+      optional: true  
+    },
+    createdOn: { 
+      type: "time", 
+      /* This field will be set to the functions result, if the field is
+         NULL. The function recieves the element as parameter. */
+      default: (c) => c.optionalVal || Date.now() 
+    },
+    fixedDefault: { 
+      type: "int", 
+      /* This field will be set to the given value, if the field is
+         NULL. */
+      default: 7, 
+      /* This field will be named "someNumber" in the output of
+         getPublic */
+      mapped: "someNumber",
+      public: true
+    },
   };
 
   const useUser = (dbs) => {
@@ -45,7 +73,7 @@ The extended classes can then be used:
 
   const peter = await new User({ optionalVal: "Peter"}).store();
   console.log(peter.content); 
-  // => { _id: 1, optionalVal: "Peter", createdOn: 12345, fixedDefault: 7 }
+  // => { id: 1, optionalVal: "Peter", createdOn: 12345, fixedDefault: 7 }
 #+END_SRC
 
 ** ManyModel
