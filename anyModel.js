@@ -2,12 +2,13 @@
 
 const { NotUnique, NotFound, DoesExist } = require("./errors");
 
-module.exports = (dbs, types, collection) => {
+module.exports = (types, collection) => {
   // No idea why, but has to be here to be populated
   const type = require("@apparts/types");
 
   return class AnyModel {
-    constructor() {
+    constructor(dbs) {
+      this._dbs = dbs;
       this._fromDB = false;
       this._collection = collection;
       this._types = types;
@@ -21,6 +22,9 @@ module.exports = (dbs, types, collection) => {
       }
       if (!collection) {
         throw new Error("[AnyModel] No collection given");
+      }
+      if (!dbs) {
+        throw new Error("[AnyModel] No dbs given");
       }
     }
 
@@ -96,7 +100,7 @@ module.exports = (dbs, types, collection) => {
     }
 
     async _updateOne(c) {
-      await dbs
+      await this._dbs
         .collection(this._collection)
         .updateOne(this._getKeyFilter(c), this._removeAutos(c));
     }
@@ -107,9 +111,9 @@ module.exports = (dbs, types, collection) => {
           continue;
         }
         if (this._types[key].type === "id") {
-          c[key] = dbs.fromId(c[key]);
+          c[key] = this._dbs.fromId(c[key]);
         } else if (this._types[key].type === "array_id") {
-          c[key] = c[key].map((v) => dbs.fromId(v));
+          c[key] = c[key].map((v) => this._dbs.fromId(v));
         }
       }
       return c;
@@ -124,7 +128,7 @@ module.exports = (dbs, types, collection) => {
           "[AnyModel] type-constraints not met: " + JSON.stringify(contents)
         );
       }
-      const ids = await dbs
+      const ids = await this._dbs
         .collection(this._collection)
         .insert(contents, this._autos, this._autos);
 

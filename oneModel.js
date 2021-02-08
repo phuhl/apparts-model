@@ -3,12 +3,12 @@
 const { NotUnique, NotFound, DoesExist } = require("./errors");
 const useAnyModel = require("./anyModel");
 
-module.exports = (dbs, types, collection) => {
-  const AnyModel = useAnyModel(dbs, types, collection);
+module.exports = (types, collection) => {
+  const AnyModel = useAnyModel(types, collection);
 
   return class OneModel extends AnyModel {
-    constructor(content) {
-      super();
+    constructor(dbs, content) {
+      super(dbs);
       if (content) {
         if (Array.isArray(content)) {
           throw new Error(
@@ -20,7 +20,9 @@ module.exports = (dbs, types, collection) => {
     }
 
     async load(filter) {
-      await this._loadOne(dbs.collection(this._collection).find(filter, 2));
+      await this._loadOne(
+        this._dbs.collection(this._collection).find(filter, 2)
+      );
       return this;
     }
 
@@ -45,12 +47,14 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
         }
         this._keys.forEach((key) => {
           if (this._types[key].type === "id") {
-            req[key] = dbs.toId(id[key]);
+            req[key] = this._dbs.toId(id[key]);
           } else {
             req[key] = id[key];
           }
         });
-        await this._loadOne(dbs.collection(this._collection).findById(req));
+        await this._loadOne(
+          this._dbs.collection(this._collection).findById(req)
+        );
       } else {
         if (this._keys.length > 1) {
           throw new Error(`[OneModel] loadById not all keys given, E49.
@@ -59,9 +63,9 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
           )}", Id: "${JSON.stringify(id)}"`);
         }
         await this._loadOne(
-          dbs
+          this._dbs
             .collection(this._collection)
-            .findById({ [this._keys[0]]: dbs.toId(id) })
+            .findById({ [this._keys[0]]: this._dbs.toId(id) })
         );
       }
       return this;
@@ -95,7 +99,7 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
     }
 
     async delete() {
-      await dbs
+      await this._dbs
         .collection(this._collection)
         .remove(this._getKeyFilter(this.content));
       return this;

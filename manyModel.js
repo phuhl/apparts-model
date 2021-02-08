@@ -3,12 +3,12 @@
 const { NotUnique, NotFound, DoesExist } = require("./errors");
 const useAnyModel = require("./anyModel");
 
-module.exports = (dbs, types, collection) => {
-  const AnyModel = useAnyModel(dbs, types, collection);
+module.exports = (types, collection) => {
+  const AnyModel = useAnyModel(types, collection);
 
   return class ManyModel extends AnyModel {
-    constructor(contents) {
-      super();
+    constructor(dbs, contents) {
+      super(dbs);
       if (contents) {
         if (!Array.isArray(contents)) {
           throw new Error("[ManyModel], contents should be an array");
@@ -19,14 +19,16 @@ module.exports = (dbs, types, collection) => {
       }
     }
 
-    async load(filter, limit, order) {
+    async load(filter, limit, offset, order) {
       this.contents = await this._load(
-        dbs.collection(this._collection).find(filter, limit, order)
+        this._dbs
+          .collection(this._collection)
+          .find(filter, limit, offset, order)
       );
       return this;
     }
 
-    async loadByIds(ids, limit) {
+    async loadByIds(ids, limit, offset) {
       if (!Array.isArray(ids)) {
         let req = {};
         if (Object.keys(ids).length !== this._keys.length) {
@@ -38,16 +40,16 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
         this._keys.forEach((key) => {
           if (this._types[key].type === "id") {
             if (Array.isArray(ids[key])) {
-              req[key] = ids[key].map((id) => dbs.toId(id));
+              req[key] = ids[key].map((id) => this._dbs.toId(id));
             } else {
-              req[key] = dbs.toId(ids[key]);
+              req[key] = this._dbs.toId(ids[key]);
             }
           } else {
             req[key] = ids[key];
           }
         });
         this.contents = await this._load(
-          dbs.collection(this._collection).findByIds(req, limit)
+          this._dbs.collection(this._collection).findByIds(req, limit, offset)
         );
       } else {
         if (this._keys.length > 1) {
@@ -57,11 +59,12 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
           )}", Id: "${JSON.stringify(ids)}"`);
         }
         this.contents = await this._load(
-          dbs
+          this._dbs
             .collection(this._collection)
             .findByIds(
-              { [this._keys[0]]: ids.map((id) => dbs.toId(id)) },
-              limit
+              { [this._keys[0]]: ids.map((id) => this._dbs.toId(id)) },
+              limit,
+              offset
             )
         );
       }
@@ -110,7 +113,7 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
       for (const key of this._keys) {
         filter[key] = { val: this.contents.map((c) => c[key]), op: "in" };
       }
-      await dbs.collection(this._collection).remove(filter);
+      await this._dbs.collection(this._collection).remove(filter);
       return this;
     }
 

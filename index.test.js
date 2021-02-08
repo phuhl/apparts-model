@@ -38,9 +38,9 @@ const noAutoType = {
   name: { type: "string", key: true },
   a: { type: "int", optional: true },
 };
-const useUser = (dbs) => useModel(dbs, type, "users");
-const useUser2 = (dbs) => useModel(dbs, multiKeyType, "users2");
-const useUser3 = (dbs) => useModel(dbs, noAutoType, "users3");
+const [Models, Model, NoModel] = useModel(type, "users");
+const [Models2, Model2, NoModel2] = useModel(multiKeyType, "users2");
+const [Models3, Model3, NoModel3] = useModel(noAutoType, "users3");
 
 let dbs;
 beforeAll(async () => {
@@ -52,58 +52,48 @@ afterAll(async () => {
 
 describe("OneModel", () => {
   test("creation of one", async () => {
-    const [, Model] = useUser(dbs);
-
-    let m = new Model({ test: 1 });
+    let m = new Model(dbs, { test: 1 });
     await expect(m.store()).resolves.toBeTruthy();
     expect(m.content).toMatchObject({ test: 1, id: 1 });
   });
 
   test("creation of many", async () => {
-    const [, Model] = useUser(dbs);
-    await expect(() => new Model([{ test: 1 }, { test: 2 }])).toThrow({
+    await expect(() => new Model(dbs, [{ test: 1 }, { test: 2 }])).toThrow({
       message: "[OneModel] cannot create multiple. Use ManyModel instead!",
     });
   });
 
   test("loadOne success", async () => {
-    const [, Model] = useUser(dbs);
-    const m = new Model();
+    const m = new Model(dbs);
 
     await expect(m.load({ test: 1 })).resolves.toBe(m);
     expect(m.content).toMatchObject({ test: 1, id: 1 });
   });
 
   test("loadOne fail (too many)", async () => {
-    const [, Model] = useUser(dbs);
+    await new Model(dbs, { test: 1, a: 2 }).store();
 
-    await new Model({ test: 1, a: 2 }).store();
-
-    const m = new Model();
+    const m = new Model(dbs);
     await expect(m.load({ test: 1 })).rejects.toMatchObject({
       message: "[Model] Object not unique",
     });
   });
 
   test("loadOne fail (too few)", async () => {
-    const [, Model] = useUser(dbs);
-
-    const m = new Model();
+    const m = new Model(dbs);
     await expect(m.load({ test: 8 })).rejects.toMatchObject({
       message: "[Model] Object not found",
     });
   });
 
   test("update", async () => {
-    const [, Model] = useUser(dbs);
+    const m = new Model(dbs);
 
-    const m = new Model();
-
-    await new Model({ test: 4, a: 1 }).store();
+    await new Model(dbs, { test: 4, a: 1 }).store();
     await m.load({ test: 4 });
     m.content.a = 2;
     await m.update();
-    const m2 = await new Model().load({ test: 4 });
+    const m2 = await new Model(dbs).load({ test: 4 });
 
     expect(m2.content).toMatchObject({
       test: 4,
@@ -112,69 +102,70 @@ describe("OneModel", () => {
   });
 
   test("delete", async () => {
-    const [, Model] = useUser(dbs);
-    await new Model({ test: 5 }).store();
-    await (await new Model().load({ test: 5 })).delete();
+    await new Model(dbs, { test: 5 }).store();
+    await (await new Model(dbs).load({ test: 5 })).delete();
 
-    await expect(new Model().load({ test: 5 })).rejects.toMatchObject({
+    await expect(new Model(dbs).load({ test: 5 })).rejects.toMatchObject({
       message: "[Model] Object not found",
     });
   });
 
   test("loadById, one key", async () => {
-    const [, Model] = useUser(dbs);
-    const m1 = await new Model({ test: 1 }).store();
-    await new Model({ test: 2 }).store();
-    const m2 = await new Model().loadById(m1.content.id);
+    const m1 = await new Model(dbs, { test: 1 }).store();
+    await new Model(dbs, { test: 2 }).store();
+    const m2 = await new Model(dbs).loadById(m1.content.id);
 
     expect(m2.content.test).toBe(1);
     expect(m2.content.id).toBe(m1.content.id);
   });
 
   test("loadById, multi key", async () => {
-    const [, Model] = useUser2(dbs);
-
-    const m1 = await new Model({ test: 1, a: 7 }).store();
-    const m3 = await new Model({ test: 1 }).store();
-    await new Model({ test: 2 }).store();
-    const m2 = await new Model().loadById({ id: m1.content.id, test: 1 });
+    const m1 = await new Model2(dbs, { test: 1, a: 7 }).store();
+    const m3 = await new Model2(dbs, { test: 1 }).store();
+    await new Model2(dbs, { test: 2 }).store();
+    const m2 = await new Model2(dbs).loadById({ id: m1.content.id, test: 1 });
 
     expect(m2.content).toMatchObject({
       a: 7,
       id: m1.content.id,
       test: 1,
     });
-    await expect(new Model().loadById(m1.content.id)).rejects.toThrow({
+    await expect(new Model2(dbs).loadById(m1.content.id)).rejects.toThrow({
       message: `[OneModel] loadById not all keys given, E49.
 Collection: "users2", Keys: "["id","test"]", Id: "${m1.content.id}"`,
     });
-    await expect(new Model().loadById({ id: m1.content.id })).rejects.toThrow({
+    await expect(
+      new Model2(dbs).loadById({ id: m1.content.id })
+    ).rejects.toThrow({
       message: `[OneModel] loadById not all keys given, E49.
 Collection: "users2", Keys: "["id","test"]", Id: "{"id":${m1.content.id}}"`,
     });
   });
 
   test("insert unique, multi key, no auto", async () => {
-    const [, Model] = useUser3(dbs);
-
-    await new Model({ email: "test@test.de", name: "Peter", a: 12 }).store();
+    await new Model3(dbs, {
+      email: "test@test.de",
+      name: "Peter",
+      a: 12,
+    }).store();
     await expect(
-      new Model({ email: "test@test.de", name: "Peter" }).store()
+      new Model3(dbs, { email: "test@test.de", name: "Peter" }).store()
     ).rejects.toMatchObject({ message: "[Model] Object does exist" });
   });
 
   test("delete, multi key, no auto", async () => {
-    const [, Model] = useUser3(dbs);
-
-    await new Model({ email: "test@test.de", name: "Franz" }).store();
-    const m1 = await new Model().load({ email: "test@test.de", name: "Franz" });
+    await new Model3(dbs, { email: "test@test.de", name: "Franz" }).store();
+    const m1 = await new Model3(dbs).load({
+      email: "test@test.de",
+      name: "Franz",
+    });
     await expect(m1.delete()).resolves.toBe(m1);
     await expect(
-      new Model().load({ email: "test@test.de", name: "Franz" })
+      new Model3(dbs).load({ email: "test@test.de", name: "Franz" })
     ).rejects.toMatchObject({
       message: "[Model] Object not found",
     });
-    const peter = await new Model().loadById({
+    const peter = await new Model3(dbs).loadById({
       email: "test@test.de",
       name: "Peter",
     });
@@ -186,9 +177,8 @@ Collection: "users2", Keys: "["id","test"]", Id: "{"id":${m1.content.id}}"`,
   });
 
   test("update, multi key, no auto", async () => {
-    const [, Model] = useUser3(dbs);
-    await new Model({ email: "test@test.de", name: "Franz" }).store();
-    const peter = await new Model().loadById({
+    await new Model3(dbs, { email: "test@test.de", name: "Franz" }).store();
+    const peter = await new Model3(dbs).loadById({
       email: "test@test.de",
       name: "Peter",
     });
@@ -196,7 +186,7 @@ Collection: "users2", Keys: "["id","test"]", Id: "{"id":${m1.content.id}}"`,
     await expect(peter.update()).resolves.toBe(peter);
     await expect(
       (
-        await new Model().loadById({
+        await new Model3(dbs).loadById({
           email: "test@test.de",
           name: "Peter",
         })
@@ -207,23 +197,33 @@ Collection: "users2", Keys: "["id","test"]", Id: "{"id":${m1.content.id}}"`,
       a: 99,
     });
     await expect(
-      (await new Model().loadById({ email: "test@test.de", name: "Franz" }))
+      (await new Model3(dbs).loadById({ email: "test@test.de", name: "Franz" }))
         .content
     ).toMatchObject({ email: "test@test.de", name: "Franz" });
+  });
+
+  test("find by substring", async () => {
+    await new Model3(dbs, {
+      email: "test1@test.de",
+      name: "Hans",
+      a: 12,
+    }).store();
+    await expect(
+      (await new Model3(dbs).load({ name: { op: "like", val: "%ans" } }))
+        .content
+    ).toMatchObject({ email: "test1@test.de", name: "Hans" });
   });
 });
 
 describe("ManyModel", () => {
   test("creation of one", async () => {
-    const [Models] = useUser(dbs);
-    await expect(() => new Models({ test: 1 })).toThrow({
+    await expect(() => new Models(dbs, { test: 1 })).toThrow({
       message: "[ManyModel], contents should be an array",
     });
   });
 
   test("creation of many", async () => {
-    const [Models] = useUser(dbs);
-    const m = new Models([{ test: 1 }, { test: 2 }]);
+    const m = new Models(dbs, [{ test: 1 }, { test: 2 }]);
     await expect(m.store()).resolves.toBe(m);
     const [{ id: id1 }, { id: id2 }] = m.contents;
     expect(m.contents).toMatchObject([
@@ -233,13 +233,13 @@ describe("ManyModel", () => {
   });
 
   test("update", async () => {
-    const [Models, Model] = useUser(dbs);
+    const ms = new Models(dbs);
 
-    const ms = new Models();
-
-    const { id: id1 } = (await new Model({ test: 10, a: 4 }).store()).content;
+    const { id: id1 } = (
+      await new Model(dbs, { test: 10, a: 4 }).store()
+    ).content;
     const [{ id: id2 }, { id: id3 }] = (
-      await new Models([
+      await new Models(dbs, [
         { test: 11, a: 4 },
         { test: 12, a: 4 },
       ]).store()
@@ -247,7 +247,7 @@ describe("ManyModel", () => {
     await ms.load({ a: 4 });
     ms.contents.forEach((c) => (c.a = 999));
     await ms.update();
-    const newms = await new Models().load({ a: 999 });
+    const newms = await new Models(dbs).load({ a: 999 });
 
     expect(newms.contents).toMatchObject([
       { test: 10, a: 999, id: id1 },
@@ -257,30 +257,28 @@ describe("ManyModel", () => {
   });
 
   test("deleteAll", async () => {
-    const [Models] = useUser(dbs);
-    await new Models([
+    await new Models(dbs, [
       { test: 1, a: 1 },
       { test: 1, a: 2 },
     ]).store();
 
-    await (await new Models().load({ test: 1 })).deleteAll();
-    const newms = await new Models().load({ test: 1 });
+    await (await new Models(dbs).load({ test: 1 })).deleteAll();
+    const newms = await new Models(dbs).load({ test: 1 });
 
     expect(newms.contents.length).toBe(0);
   });
 
   test("loadByIds, one key", async () => {
-    const [Models] = useUser(dbs);
     const [{ id: id1 }, { id: id2 }, { id: id3 }] = (
-      await new Models([
+      await new Models(dbs, [
         { test: 99, a: 1 },
         { test: 100, a: 2 },
         { test: 101, a: 3 },
       ]).store()
     ).contents;
 
-    const ms = await new Models().loadByIds({ id: [id1, id2, id3] });
-    const ms2 = await new Models().loadByIds([id1, id2, id3]);
+    const ms = await new Models(dbs).loadByIds({ id: [id1, id2, id3] });
+    const ms2 = await new Models(dbs).loadByIds([id1, id2, id3]);
     const result = [
       {
         test: 99,
@@ -302,13 +300,56 @@ describe("ManyModel", () => {
     expect(ms2.contents).toMatchObject(result);
   });
 
+  test("loadByIds, with limit", async () => {
+    const [{ id: id1 }, { id: id2 }, { id: id3 }] = (
+      await new Models(dbs, [
+        { test: 778, a: 1 },
+        { test: 779, a: 2 },
+        { test: 776, a: 3 },
+      ]).store()
+    ).contents;
+
+    const ids1 = { id: [id1, id2, id3] };
+    const ids2 = [id1, id2, id3];
+    const ms_1 = await new Models(dbs).loadByIds(ids1, 2);
+    const ms2_1 = await new Models(dbs).loadByIds(ids2, 2);
+    const ms_2 = await new Models(dbs).loadByIds(ids1, 2, 2);
+    const ms2_2 = await new Models(dbs).loadByIds(ids2, 2, 2);
+    const ms_3 = await new Models(dbs).loadByIds(ids1, 2, 4);
+    const ms2_3 = await new Models(dbs).loadByIds(ids2, 2, 4);
+    const result1 = [
+      {
+        test: 778,
+        a: 1,
+        id: id1,
+      },
+      {
+        test: 779,
+        a: 2,
+        id: id2,
+      },
+    ];
+    const result2 = [
+      {
+        test: 776,
+        a: 3,
+        id: id3,
+      },
+    ];
+    const result3 = [];
+    expect(ms_1.contents).toMatchObject(result1);
+    expect(ms2_1.contents).toMatchObject(result1);
+    expect(ms_2.contents).toMatchObject(result2);
+    expect(ms2_2.contents).toMatchObject(result2);
+    expect(ms_3.contents).toMatchObject(result3);
+    expect(ms2_3.contents).toMatchObject(result3);
+  });
+
   test("loadByIds, multi key", async () => {
-    const [Models, Model] = useUser2(dbs);
+    const m1 = await new Model2(dbs, { test: 1, a: 7 }).store();
+    const m3 = await new Model2(dbs, { test: 1 }).store();
 
-    const m1 = await new Model({ test: 1, a: 7 }).store();
-    const m3 = await new Model({ test: 1 }).store();
-
-    const mres = await new Models().loadByIds({
+    const mres = await new Models2(dbs).loadByIds({
       id: [m1.content.id, m3.content.id],
       test: 1,
     });
@@ -325,23 +366,59 @@ describe("ManyModel", () => {
         id: m3.content.id,
       },
     ]);
-    await expect(new Models().loadByIds([m1.content.id])).rejects.toThrow({
+    await expect(new Models2(dbs).loadByIds([m1.content.id])).rejects.toThrow({
       message: `[ManyModel] loadByIds not all keys given, E50.
 Collection: "users2", Keys: "["id","test"]", Id: "[${m1.content.id}]"`,
     });
     await expect(
-      new Models().loadByIds({ id: [m1.content.id] })
+      new Models2(dbs).loadByIds({ id: [m1.content.id] })
     ).rejects.toThrow({
       message: `[ManyModel] loadByIds not all keys given, E50.
 Collection: "users2", Keys: "["id","test"]", Id: "{"id":[${m1.content.id}]}"`,
     });
   });
 
-  test("insert, multi key, no auto", async () => {
-    const [Models] = useUser3(dbs);
+  test("load, with limit", async () => {
+    const [{ id: id1 }, { id: id2 }, { id: id3 }] = (
+      await new Models(dbs, [
+        { test: 798, a: 1 },
+        { test: 799, a: 2 },
+        { test: 796, a: 3 },
+      ]).store()
+    ).contents;
 
+    const ids1 = { id: { op: "in", val: [id1, id2, id3] } };
+    const ms_1 = await new Models(dbs).load(ids1, 2);
+    const ms_2 = await new Models(dbs).load(ids1, 2, 2);
+    const ms_3 = await new Models(dbs).load(ids1, 2, 4);
+    const result1 = [
+      {
+        test: 798,
+        a: 1,
+        id: id1,
+      },
+      {
+        test: 799,
+        a: 2,
+        id: id2,
+      },
+    ];
+    const result2 = [
+      {
+        test: 796,
+        a: 3,
+        id: id3,
+      },
+    ];
+    const result3 = [];
+    expect(ms_1.contents).toMatchObject(result1);
+    expect(ms_2.contents).toMatchObject(result2);
+    expect(ms_3.contents).toMatchObject(result3);
+  });
+
+  test("insert, multi key, no auto", async () => {
     await expect(
-      new Models([
+      new Models3(dbs, [
         { email: "test1@test.de", name: "Peter", a: 12 },
         { email: "test1@test.de", name: "Peter", a: 12 },
       ]).store()
@@ -349,58 +426,63 @@ Collection: "users2", Keys: "["id","test"]", Id: "{"id":[${m1.content.id}]}"`,
   });
 
   test("delete, multi key, no auto", async () => {
-    const [Models] = useUser3(dbs);
-
-    await new Models([{ email: "test1@test.de", name: "Franz" }]).store();
-    const m1 = await new Models().load({ email: "test1@test.de" });
+    await new Models3(dbs, [{ email: "test1@test.de", name: "Franz" }]).store();
+    const m1 = await new Models3(dbs).load({ email: "test1@test.de" });
     await expect(m1.deleteAll()).resolves.toBe(m1);
     await expect(
-      (await new Models().load({ email: "test1@test.de" })).contents.length
+      (await new Models3(dbs).load({ email: "test1@test.de" })).contents.length
     ).toBe(0);
   });
 
   test("update, multi key, no auto", async () => {
-    const [Models, Model] = useUser3(dbs);
-    await new Models([
+    await new Models3(dbs, [
       { email: "test1@test.de", name: "Franz" },
       { email: "test1@test.de", name: "Peter" },
       { email: "test1@test.de", name: "Fritz" },
     ]).store();
-    const tests = await new Models().load({
+    const tests = await new Models3(dbs).load({
       email: "test1@test.de",
     });
     tests.set("a", 101);
     await expect(tests.update()).resolves.toBe(tests);
     await expect(
-      (await new Model().loadById({ email: "test1@test.de", name: "Peter" }))
-        .content
+      (
+        await new Model3(dbs).loadById({
+          email: "test1@test.de",
+          name: "Peter",
+        })
+      ).content
     ).toMatchObject({ email: "test1@test.de", name: "Peter", a: 101 });
     await expect(
-      (await new Model().loadById({ email: "test1@test.de", name: "Franz" }))
-        .content
+      (
+        await new Model3(dbs).loadById({
+          email: "test1@test.de",
+          name: "Franz",
+        })
+      ).content
     ).toMatchObject({ email: "test1@test.de", name: "Franz", a: 101 });
     await expect(
-      (await new Model().loadById({ email: "test1@test.de", name: "Fritz" }))
-        .content
+      (
+        await new Model3(dbs).loadById({
+          email: "test1@test.de",
+          name: "Fritz",
+        })
+      ).content
     ).toMatchObject({ email: "test1@test.de", name: "Fritz" });
   });
 });
 
 describe("NoneModel", () => {
   test("loadOne success", async () => {
-    const [, , NoModel] = useUser(dbs);
-
-    const m = new NoModel();
+    const m = new NoModel(dbs);
 
     await expect(m.loadNone({ test: 777 })).resolves.toBe(m);
   });
 
   test("loadOne fail (too many)", async () => {
-    const [, Model, NoModel] = useUser(dbs);
+    await new Model(dbs, { test: 777 }).store();
 
-    await new Model({ test: 777 }).store();
-
-    const m = new NoModel();
+    const m = new NoModel(dbs);
     await expect(m.loadNone({ test: 777 })).rejects.toMatchObject({
       message: "[Model] Object does exist",
     });

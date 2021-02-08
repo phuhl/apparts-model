@@ -11,7 +11,6 @@ these classes by using them:
 #+BEGIN_SRC js
   const { useModel } = require("@apparts/model");
 
-
   const types = {
     id: { 
       /* Types as defined by @apparts/types */
@@ -47,21 +46,21 @@ these classes by using them:
     },
   };
 
-  const useUser = (dbs) => {
-    const [Users, _User, NoUser] = useModel(dbs, types, "users");
+  const [Users, _User, NoUser] = useModel(types, "users");
 
-    // You can extend the classes like this:
-    class User extends _User {
-      constructor(content) {
-        super(content);
-        // do something here
-      }
-      additionalFunc() {
-        return this.content;
-      }
+  // You can extend the classes like this:
+  class User extends _User {
+    constructor(dbs, content) {
+      super(dbs, content);
+      // do something here
     }
+    additionalFunc() {
+      return this.content;
+    }
+  }
 
-    return [Users, User, NoUser];
+  module.exports = {
+    Users, User, NoUser
   };
 #+END_SRC
 
@@ -69,9 +68,7 @@ The extended classes can then be used:
 
 #+BEGIN_SRC js
   // get dbs from "@apparts/db" somehow
-  const [,User] = useUser(dbs);
-
-  const peter = await new User({ optionalVal: "Peter"}).store();
+  const peter = await new User(dbs, { optionalVal: "Peter"}).store();
   console.log(peter.content); 
   // => { id: 1, optionalVal: "Peter", createdOn: 12345, fixedDefault: 7 }
 #+END_SRC
@@ -83,9 +80,10 @@ _Values:_
   save the changes, call ~update~.
 
 _Functions:_
-- ~constructor(contents)~ :: Constructor
-- ~async load(filter, limit, order)~ :: Load data
-- ~async loadByIds(ids, limit)~ :: Load data by IDs. For models with
+- ~constructor(dbs, [contents])~ :: Constructor
+- ~async load(filter, limit, offset, order)~ :: Load data, filter syntax
+  is as defined by the =find= function of the =dbs=.
+- ~async loadByIds(ids, limit, offset)~ :: Load data by IDs. For models with
   only one key, you can use ~[<id1>, <id2>, ...]~, for a model with
   multiple keys, you have to use ~{ <key1>: [ <id1>, ...], <key2>:
   [<key2id1>, ...], ...}~.
@@ -107,7 +105,7 @@ _Values:_
   save the changes, call ~update~.
 
 _Functions:_
-- ~constructor(content)~ :: Constructor
+- ~constructor(dbs, [content])~ :: Constructor
 - ~async load(filter)~ :: Load data
 - ~async loadById(id)~ :: Load data by ID. For models with
   only one key, you can use ~<id>~, for a model with
@@ -122,7 +120,7 @@ _Functions:_
 ** NoneModel
 
 _Functions:_
-- ~constructor()~ :: Constructor
+- ~constructor(dbs)~ :: Constructor
 - ~async loadNone(filter)~ :: Throws an ~DoesExist~ error, if something was
   loaded, does nothing if nothing was loaded.
 
@@ -135,3 +133,4 @@ _Functions:_
 #+BEGIN_SRC js
   const { NotUnique, NotFound, DoesExist } = require("@apparts/model");
 #+END_SRC
+
