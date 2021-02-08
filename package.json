@@ -1,6 +1,6 @@
 {
   "name": "@apparts/model",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "A model for reading and writing to the database. It stores data.",
   "main": "index.js",
   "scripts": {
@@ -21,7 +21,7 @@
   "author": "Philipp Uhl",
   "license": "UNLICENSED",
   "peerDependencies": {
-    "@apparts/types": "^3.0.0"
+    "@apparts/types": "^6.0.0"
   },
   "jest": {
     "testTimeout": 10000,
@@ -35,7 +35,7 @@
     "@apparts/config": "^1.0.5",
     "@apparts/db": "^2.1.0",
     "@apparts/error": "^1.0.3",
-    "@apparts/types": "^3.0.0",
+    "@apparts/types": "^6.0.0",
     "jest": "^26.2.2",
     "pg": "^8.3.0"
   }
