@@ -1,6 +1,6 @@
 const { setup, teardown } = require("./tests/database");
 const { useModel } = require("./index.js");
-const { NotUnique, NotFound, DoesExist } = require("./errors");
+const { NotUnique, NotFound, DoesExist, IsReference } = require("./errors");
 
 const SETUPDB = `
 CREATE TABLE users (
@@ -21,7 +21,17 @@ CREATE TABLE users3 (
   name VARCHAR(128) NOT NULL,
   a INT,
   PRIMARY KEY (name, email)
-);`;
+);
+
+CREATE TABLE comment (
+  id SERIAL NOT NULL,
+  userid INT NOT NULL,
+  comment TEXT,
+  PRIMARY KEY (id, userid),
+  FOREIGN KEY (userid) REFERENCES users(id)
+);
+
+`;
 
 const type = {
   id: { type: "id", key: true, auto: true },
@@ -38,9 +48,15 @@ const noAutoType = {
   name: { type: "string", key: true },
   a: { type: "int", optional: true },
 };
+const foreignType = {
+  id: { type: "id", key: true, auto: true },
+  userid: { type: "id", key: true },
+  comment: { type: "string", optional: true },
+};
 const [Models, Model, NoModel] = useModel(type, "users");
 const [Models2, Model2, NoModel2] = useModel(multiKeyType, "users2");
 const [Models3, Model3, NoModel3] = useModel(noAutoType, "users3");
+const [Models4, Model4, NoModel4] = useModel(foreignType, "comment");
 
 let dbs;
 beforeAll(async () => {
@@ -101,6 +117,51 @@ describe("OneModel", () => {
     });
   });
 
+  test("update fails, key changed", async () => {
+    const m = new Model(dbs);
+
+    const mOld = await new Model(dbs, { test: 400, a: 1 }).store();
+    await m.load({ test: 400 });
+    m.content.a = 2;
+    m.content.id = "sheesh";
+    await expect(async () => await m.update()).rejects.toThrow({
+      message:
+        "[AnyModel] tried to update but IDs did not match loaded IDs, E46",
+    });
+    const m2 = await new Model(dbs).load({ test: 400 });
+    expect(m2.content).toMatchObject(mOld.content);
+  });
+
+  test("update fails, content emptied", async () => {
+    const m = new Model(dbs);
+
+    const mOld = await new Model(dbs, { test: 401, a: 1 }).store();
+    await m.load({ test: 400 });
+    m.content = {};
+
+    await expect(async () => await m.update()).rejects.toThrow({
+      message:
+        "[AnyModel] tried to update but IDs did not match loaded IDs, E46",
+    });
+
+    const m2 = await new Model(dbs).load({ test: 401 });
+    expect(m2.content).toMatchObject(mOld.content);
+  });
+
+  test("update fails, invalid data", async () => {
+    const m = new Model(dbs);
+
+    const mOld = await new Model(dbs, { test: 402, a: 1 }).store();
+    await m.load({ test: 400 });
+    m.content.a = "brru";
+    await expect(async () => await m.update()).rejects.toThrow({
+      message:
+        '[AnyModel] type-constraints not met: [{"id":4,"test":400,"a":"brru"}]',
+    });
+    const m2 = await new Model(dbs).load({ test: 402 });
+    expect(m2.content).toMatchObject(mOld.content);
+  });
+
   test("delete", async () => {
     await new Model(dbs, { test: 5 }).store();
     await (await new Model(dbs).load({ test: 5 })).delete();
@@ -108,6 +169,19 @@ describe("OneModel", () => {
     await expect(new Model(dbs).load({ test: 5 })).rejects.toMatchObject({
       message: "[Model] Object not found",
     });
+  });
+
+  test("delete of referenced fails", async () => {
+    const m = await new Model(dbs, { test: 5 }).store();
+    await new Model4(dbs, { userid: m.content.id }).store();
+
+    const m2 = await new Model(dbs).load({ test: 5 });
+    await expect(async () => await m2.delete()).rejects.toMatchObject({
+      message: "[Model] Object is still reference",
+    });
+
+    await expect(new Model(dbs).load({ test: 5 }));
+    await expect(new Model4(dbs).load({ userid: m.content.id }));
   });
 
   test("loadById, one key", async () => {
@@ -202,6 +276,31 @@ Collection: "users2", Keys: "["id","test"]", Id: "{"id":${m1.content.id}}"`,
     ).toMatchObject({ email: "test@test.de", name: "Franz" });
   });
 
+  test("update multi key fails, key changed", async () => {
+    const m = new Model3(dbs);
+
+    const mOld = await new Model3(dbs, {
+      email: "jesus@god.com",
+      name: "jesus",
+    }).store();
+    await m.load({ email: "jesus@god.com" });
+    m.content.email = "400";
+    await expect(async () => await m.update()).rejects.toThrow({
+      message:
+        "[AnyModel] tried to update but IDs did not match loaded IDs, E46",
+    });
+
+    const m2 = await new Model3(dbs).load({ email: "jesus@god.com" });
+    m2.content.name = "400";
+    await expect(async () => await m2.update()).rejects.toThrow({
+      message:
+        "[AnyModel] tried to update but IDs did not match loaded IDs, E46",
+    });
+
+    const m3 = await new Model3(dbs).load({ email: "jesus@god.com" });
+    expect(m3.content).toMatchObject(mOld.content);
+  });
+
   test("find by substring", async () => {
     await new Model3(dbs, {
       email: "test1@test.de",
@@ -256,6 +355,80 @@ describe("ManyModel", () => {
     ]);
   });
 
+  test("update fails, keys changed", async () => {
+    const { id: id1 } = (
+      await new Model(dbs, { test: 10, a: 4000 }).store()
+    ).content;
+    const [{ id: id2 }, { id: id3 }] = (
+      await new Models(dbs, [
+        { test: 11, a: 4000 },
+        { test: 12, a: 4000 },
+      ]).store()
+    ).contents;
+    const ms = await new Models(dbs).load({ a: 4000 });
+    ms.contents.forEach((c, i) => (c.id = 999 + i));
+    await expect(async () => await ms.update()).rejects.toThrow({
+      message:
+        "[AnyModel] tried to update but IDs did not match loaded IDs, E46",
+    });
+    const newms = await new Models(dbs).load({ a: 4000 });
+
+    expect(newms.contents).toMatchObject([
+      { test: 10, a: 4000, id: id1 },
+      { test: 11, a: 4000, id: id2 },
+      { test: 12, a: 4000, id: id3 },
+    ]);
+  });
+
+  test("update fails, length of content changed", async () => {
+    const { id: id1 } = (
+      await new Model(dbs, { test: 10, a: 4001 }).store()
+    ).content;
+    const [{ id: id2 }, { id: id3 }] = (
+      await new Models(dbs, [
+        { test: 11, a: 4001 },
+        { test: 12, a: 4001 },
+      ]).store()
+    ).contents;
+    const ms = await new Models(dbs).load({ a: 4001 });
+    ms.contents = ms.contents.slice(1);
+    await expect(async () => await ms.update()).rejects.toThrow({
+      message:
+        "[AnyModel] tried to update but IDs did not match loaded IDs, E46",
+    });
+    const newms = await new Models(dbs).load({ a: 4001 });
+
+    expect(newms.contents).toMatchObject([
+      { test: 10, a: 4001, id: id1 },
+      { test: 11, a: 4001, id: id2 },
+      { test: 12, a: 4001, id: id3 },
+    ]);
+  });
+
+  test("update fails, content does not fit schema", async () => {
+    const { id: id1 } = (
+      await new Model(dbs, { test: 10, a: 4002 }).store()
+    ).content;
+    const [{ id: id2 }, { id: id3 }] = (
+      await new Models(dbs, [
+        { test: 11, a: 4002 },
+        { test: 12, a: 4002 },
+      ]).store()
+    ).contents;
+    const ms = await new Models(dbs).load({ a: 4002 });
+    ms.contents[1].test = "sheesh";
+    await expect(async () => await ms.update()).rejects.toThrow({
+      message: `[AnyModel] type-constraints not met: [{"id":${id1},"test":10,"a":4002},{"id":${id2},"test":"sheesh","a":4002},{"id":${id3},"test":12,"a":4002}]`,
+    });
+    const newms = await new Models(dbs).load({ a: 4002 });
+
+    expect(newms.contents).toMatchObject([
+      { test: 10, a: 4002, id: id1 },
+      { test: 11, a: 4002, id: id2 },
+      { test: 12, a: 4002, id: id3 },
+    ]);
+  });
+
   test("deleteAll", async () => {
     await new Models(dbs, [
       { test: 1, a: 1 },
@@ -266,6 +439,24 @@ describe("ManyModel", () => {
     const newms = await new Models(dbs).load({ test: 1 });
 
     expect(newms.contents.length).toBe(0);
+  });
+
+  test("deleteAll of referenced fails", async () => {
+    const ms = await new Models(dbs, [
+      { test: 50 },
+      { test: 50 },
+      { test: 50 },
+    ]).store();
+    await new Model4(dbs, { userid: ms.contents[1].id }).store();
+
+    const m2 = await new Models(dbs).load({ test: 50 });
+    await expect(async () => await m2.deleteAll()).rejects.toMatchObject({
+      message: "[Model] Object is still reference",
+    });
+
+    const msNew = await new Models(dbs).load({ test: 50 });
+    await expect(msNew.contents).toMatchObject(ms.contents);
+    await expect(new Model4(dbs).load({ userid: ms.contents[1].id }));
   });
 
   test("loadByIds, one key", async () => {
@@ -469,6 +660,56 @@ Collection: "users2", Keys: "["id","test"]", Id: "{"id":[${m1.content.id}]}"`,
         })
       ).content
     ).toMatchObject({ email: "test1@test.de", name: "Fritz" });
+  });
+
+  test("update fails, multi key, keys changed", async () => {
+    await new Models3(dbs, [
+      { email: "test1brr@test.de", name: "Franz" },
+      { email: "test1brr@test.de", name: "Peter" },
+      { email: "test1brr@test.de", name: "Fritz" },
+    ]).store();
+    const tests = await new Models3(dbs).load({
+      email: "test1brr@test.de",
+    });
+    tests.set("email", "juu");
+    await expect(async () => await tests.update()).rejects.toThrow({
+      message:
+        "[AnyModel] tried to update but IDs did not match loaded IDs, E46",
+    });
+
+    const tests2 = await new Models3(dbs).load({
+      email: "test1brr@test.de",
+    });
+    tests2.set("name", "juu");
+    await expect(async () => await tests2.update()).rejects.toThrow({
+      message:
+        "[AnyModel] tried to update but IDs did not match loaded IDs, E46",
+    });
+
+    await expect(
+      (
+        await new Model3(dbs).loadById({
+          email: "test1brr@test.de",
+          name: "Peter",
+        })
+      ).content
+    ).toMatchObject({ email: "test1brr@test.de", name: "Peter" });
+    await expect(
+      (
+        await new Model3(dbs).loadById({
+          email: "test1brr@test.de",
+          name: "Franz",
+        })
+      ).content
+    ).toMatchObject({ email: "test1brr@test.de", name: "Franz" });
+    await expect(
+      (
+        await new Model3(dbs).loadById({
+          email: "test1brr@test.de",
+          name: "Fritz",
+        })
+      ).content
+    ).toMatchObject({ email: "test1brr@test.de", name: "Fritz" });
   });
 });
 

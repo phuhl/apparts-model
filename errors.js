@@ -10,9 +10,13 @@ function DoesExist() {
   this.message = `[Model] Object does exist`;
   this.toString = () => this.message;
 }
-
+function IsReference() {
+  this.message = `[Model] Object is still reference`;
+  this.toString = () => this.message;
+}
 module.exports = {
   NotUnique,
   NotFound,
   DoesExist,
+  IsReference,
 };

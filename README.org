@@ -9,19 +9,19 @@ classes are ~OneModel~, ~ManyModel~, and ~NoneModel~. You can extend
 these classes by using them:
 
 #+BEGIN_SRC js
-  const { useModel } = require("@apparts/model");
+  const { useModel, makeModel } = require("@apparts/model");
 
   const types = {
-    id: { 
+    id: {
       /* Types as defined by @apparts/types */
       type: "id",
       /* Will be shown in output of getPublic*/
-      public: true,  
+      public: true,
       /* Auto increment this field */
-      auto: true,    
+      auto: true,
       /* This is a key. Combined keys are possible, too, by setting 
          { key: true } on multiple fields. */
-      key: true 
+      key: true
     }   
     optionalVal: { 
       type: "string", 
@@ -59,9 +59,7 @@ these classes by using them:
     }
   }
 
-  module.exports = {
-    Users, User, NoUser
-  };
+  module.exports = makeModel("User", [Users, User, NoUser]);
 #+END_SRC
 
 The extended classes can then be used:
@@ -81,8 +79,9 @@ _Values:_
 
 _Functions:_
 - ~constructor(dbs, [contents])~ :: Constructor
-- ~async load(filter, limit, offset, order)~ :: Load data, filter syntax
-  is as defined by the =find= function of the =dbs=.
+- ~async load(filter, limit, offset, order)~ :: Load data, filter grammar
+  is as defined by the =find= function of the =dbs=. For more information,
+  see below at in the section "Filter Grammar".
 - ~async loadByIds(ids, limit, offset)~ :: Load data by IDs. For models with
   only one key, you can use ~[<id1>, <id2>, ...]~, for a model with
   multiple keys, you have to use ~{ <key1>: [ <id1>, ...], <key2>:
@@ -93,8 +92,9 @@ _Functions:_
 - ~set(field, val)~ :: Set a field on all elements
 - ~setF(field, f)~ :: Set a field on all elements through a function,
   that receives the element and returns the new value
-- ~async deleteAll()~ :: Delete all from the loaded collection from
-  the database
+- ~async deleteAll()~ :: Delete all from the loaded collection from the
+  database. If any of the items is referenced by another item,
+  =IsReference= will be thrown.
 - ~getPublic()~ :: Get the public representation (marked as public in
   the types definition by the key ~public (bool)~).
 
@@ -106,14 +106,18 @@ _Values:_
 
 _Functions:_
 - ~constructor(dbs, [content])~ :: Constructor
-- ~async load(filter)~ :: Load data
+- ~async load(filter)~ :: Load one item. If more than one item was found
+  that satisfies the filter, a =NotUnique= error will be thrown. The filter grammar
+  is as defined by the =find= function of the =dbs=. For more information,
+  see below at in the section "Filter Grammar".
 - ~async loadById(id)~ :: Load data by ID. For models with
   only one key, you can use ~<id>~, for a model with
   multiple keys, you have to use ~{ <key1>: <id>, <key2>: <key2id>, ... }~.
 - ~async store()~ :: Saves to the database
 - ~async update()~ :: Updates the values, if you updated the contents.
 - ~set(field, val)~ :: Set a field on all elements
-- ~async delete()~ :: Delete this element from the database
+- ~async delete()~ :: Delete this element from the database. If the item
+  is referenced by another item, =IsReference= will be thrown.
 - ~getPublic()~ :: Get the public representation (marked as public in
   the types definition by the key ~public (bool)~).
 
@@ -122,15 +126,42 @@ _Functions:_
 _Functions:_
 - ~constructor(dbs)~ :: Constructor
 - ~async loadNone(filter)~ :: Throws an ~DoesExist~ error, if something was
-  loaded, does nothing if nothing was loaded.
+  loaded, does nothing if nothing was loaded. The filter grammar
+  is as defined by the =find= function of the =dbs=. For more information,
+  see below at in the section "Filter Grammar".
 
 ** Errors
 
 - ~DoesExist~
 - ~NotFound~
 - ~NotUnique~
+- IsReference
 
 #+BEGIN_SRC js
-  const { NotUnique, NotFound, DoesExist } = require("@apparts/model");
+  const { NotUnique, NotFound, DoesExist, IsReference } = require("@apparts/model");
 #+END_SRC
 
+** Filter Grammar
+
+The filter syntax is like this:
+
+#+BEGIN_SRC js
+const filter = { <key>: <matcher>, ...};
+// where <key> is a key from the type and
+// where matcher is
+<matcher> = <value>
+        | { op: <numoperator>, val: <int> }
+        | { op: <stroperator>, val: <string> }
+        | { op: "and", val: <matcher> } // logical and for all subconditions
+<numoperator> = lte  // less than or equals
+              | lt   // less than
+              | gte  // greater than or equals
+              | gt   // greater than
+<stroperator> = like // sql like, a string comparison where the "%" character
+                     // will be matched against anything. E.g. "bread%crumb"
+                     // matches "bread crumb" or "bread eating crumb".
+<value> = <string>
+        | <int>
+        | <boolean>
+        | null
+#+END_SRC

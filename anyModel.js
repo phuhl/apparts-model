@@ -28,6 +28,10 @@ module.exports = (types, collection) => {
       }
     }
 
+    static getTypes() {
+      return types;
+    }
+
     _fillInDefaults(values) {
       for (let key in this._types) {
         if (typeof this._types[key].default === "function") {
@@ -54,7 +58,7 @@ module.exports = (types, collection) => {
       const cs = await f.toArray();
       this._fromDB = true;
       const contents = cs.map((c) => this._convertIds(c));
-      // this._loadedIds = cs.map((c) => c._id);
+      this._loadedKeys = cs.map((c) => this._keys.map((key) => c[key]));
       return contents;
     }
 
@@ -62,18 +66,27 @@ module.exports = (types, collection) => {
       if (!this._fromDB) {
         throw new Error("[AnyModel] update on non-loaded Model, E29");
       }
-      /*
-        let newIds = contents.map((c) => c._id);
-        if (
+
+      const newKeys = contents.map((c) => this._keys.map((key) => c[key]));
+      if (
         !(
-          this._loadedIds.length === newIds.length &&
-          this._loadedIds.every((v, i) => newIds[i] === v)
+          this._loadedKeys.length === newKeys.length &&
+          this._loadedKeys.every((vs, i) =>
+            vs.every((v, j) => newKeys[i][j] === v)
+          )
         )
       ) {
+        console.log("E46:", contents, this._loadedKeys, newKeys);
         throw new Error(
           "[AnyModel] tried to update but IDs did not match loaded IDs, E46"
         );
-      }*/
+      }
+      if (!this._checkTypes(contents)) {
+        throw new Error(
+          "[AnyModel] type-constraints not met: " + JSON.stringify(contents)
+        );
+      }
+
       if (contents.length > 1) {
         await Promise.all(contents.map((c) => this._updateOne(c)));
       } else {
@@ -190,7 +203,7 @@ module.exports = (types, collection) => {
           if (types[key].derived) {
             val = types[key].derived(c);
           }
-          if (types[key].public && val !== undefined) {
+          if (types[key].public && val !== undefined && val !== null) {
             if (types[key].mapped) {
               obj[types[key].mapped] = val;
             } else {

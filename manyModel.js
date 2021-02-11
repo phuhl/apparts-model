@@ -1,6 +1,6 @@
 "use strict";
 
-const { NotUnique, NotFound, DoesExist } = require("./errors");
+const { NotUnique, NotFound, DoesExist, IsReference } = require("./errors");
 const useAnyModel = require("./anyModel");
 
 module.exports = (types, collection) => {
@@ -113,7 +113,16 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
       for (const key of this._keys) {
         filter[key] = { val: this.contents.map((c) => c[key]), op: "in" };
       }
-      await this._dbs.collection(this._collection).remove(filter);
+      try {
+        await this._dbs.collection(this._collection).remove(filter);
+      } catch (err) {
+        if (err._code === 2) {
+          throw new IsReference();
+        } else {
+          console.log(err);
+          throw new Error("[OneModel] Unexpected error in store: ");
+        }
+      }
       return this;
     }
 

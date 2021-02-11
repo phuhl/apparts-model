@@ -1,6 +1,6 @@
 {
   "name": "@apparts/model",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "A model for reading and writing to the database. It stores data.",
   "main": "index.js",
   "scripts": {
@@ -21,10 +21,16 @@
   "author": "Philipp Uhl",
   "license": "UNLICENSED",
   "peerDependencies": {
-    "@apparts/types": "^6.0.0"
+    "@apparts/types": "^6.0.0",
+    "@apparts/db": "^2.1.1"
   },
   "jest": {
     "testTimeout": 10000,
+    "watchPathIgnorePatterns": [
+      "/\\.#.*",
+      "/.*~",
+      "/#.*#"
+    ],
     "clearMocks": true,
     "coveragePathIgnorePatterns": [
       "<rootDir>/node_modules/",
@@ -33,7 +39,7 @@
   },
   "devDependencies": {
     "@apparts/config": "^1.0.5",
-    "@apparts/db": "^2.1.0",
+    "@apparts/db": "^2.1.1",
     "@apparts/error": "^1.0.3",
     "@apparts/types": "^6.0.0",
     "jest": "^26.2.2",
