@@ -71,6 +71,29 @@ The extended classes can then be used:
   // => { id: 1, optionalVal: "Peter", createdOn: 12345, fixedDefault: 7 }
 #+END_SRC
 
+
+** =useModel= and =makeModel=
+
+@apparts/model exports two functions: =useModel= and =makeModel=:
+
+- =useModel : (<types>, <collection name>) => <[ManyModel, OneModel, NoneModel]>= ::
+  A function that takes the type definition of the model and the name
+  for the collection (with Postgresql that would be the table
+  name). It returns an array with a =ManyModel=, an =OneModel= and a
+  =NoneModel= for the given type and collection name.
+- =makeModel : (<Name>, [ManyModel, OneModel, NoneModel]) => { use<Name>, <Name>, <Name>s, No<Name> }= :: 
+  A function that is intended to generate what a file exports, that
+  defines a model. It takes the overloaded classes as input and the
+  models name. It returns an object with a function that works similar
+  to =useModel= and the respective Many-, One-, NoneModel but named
+  according to the =name=-parameter.
+  - =use<Name> : (?dbs) => [<Name>s, <Name>, No<Name>]= :: The =use<Name>=
+    function can be either invoked with a [[https://github.com/phuhl/apparts-db][Dbs]] or without. When invoked
+    with a Dbs, the returned Models will have the Dbs set already and
+    have a changed constructor signature: The ManyModel and OneModel
+    take the content as first and only parameter, the NoneModel
+    doesn't take a parameter at all.
+
 ** ManyModel
 
 _Values:_
@@ -78,11 +101,13 @@ _Values:_
   save the changes, call ~update~.
 
 _Functions:_
-- ~constructor(dbs, [contents])~ :: Constructor
-- ~async load(filter, limit, offset, order)~ :: Load data, filter grammar
+- ~constructor(dbs, ?[contents])~ :: Constructor, when used via
+  =use<Name>()=.
+- ~constructor(?[contents])~ :: Constructor, when used via =use<Name>(dbs)=.
+- ~async load(filter, ?limit, ?offset, ?order)~ :: Load data, filter grammar
   is as defined by the =find= function of the =dbs=. For more information,
   see below at in the section "Filter Grammar".
-- ~async loadByIds(ids, limit, offset)~ :: Load data by IDs. For models with
+- ~async loadByIds(ids, ?limit, ?offset)~ :: Load data by IDs. For models with
   only one key, you can use ~[<id1>, <id2>, ...]~, for a model with
   multiple keys, you have to use ~{ <key1>: [ <id1>, ...], <key2>:
   [<key2id1>, ...], ...}~.
@@ -97,6 +122,7 @@ _Functions:_
   =IsReference= will be thrown.
 - ~getPublic()~ :: Get the public representation (marked as public in
   the types definition by the key ~public (bool)~).
+- =static getTypes()= :: Returns the type of the model
 
 ** OneModel
 
@@ -105,7 +131,8 @@ _Values:_
   save the changes, call ~update~.
 
 _Functions:_
-- ~constructor(dbs, [content])~ :: Constructor
+- ~constructor(dbs, ?content)~ :: Constructor, when used via =use<Name>()=.
+- ~constructor(?content)~ :: Constructor, when used via =use<Name>(dbs)=.
 - ~async load(filter)~ :: Load one item. If more than one item was found
   that satisfies the filter, a =NotUnique= error will be thrown. The filter grammar
   is as defined by the =find= function of the =dbs=. For more information,
@@ -120,6 +147,7 @@ _Functions:_
   is referenced by another item, =IsReference= will be thrown.
 - ~getPublic()~ :: Get the public representation (marked as public in
   the types definition by the key ~public (bool)~).
+- =static getTypes()= :: Returns the type of the model
 
 ** NoneModel
 
@@ -129,6 +157,7 @@ _Functions:_
   loaded, does nothing if nothing was loaded. The filter grammar
   is as defined by the =find= function of the =dbs=. For more information,
   see below at in the section "Filter Grammar".
+- =static getTypes()= :: Returns the type of the model
 
 ** Errors
 
