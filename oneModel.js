@@ -1,6 +1,12 @@
 "use strict";
 
-const { NotUnique, NotFound, DoesExist, IsReference } = require("./errors");
+const {
+  NotUnique,
+  NotFound,
+  DoesExist,
+  IsReference,
+  ConstraintFailed,
+} = require("./errors");
 const useAnyModel = require("./anyModel");
 
 module.exports = (types, collection) => {
@@ -80,6 +86,8 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
         // MONGO
         if (err._code === 1) {
           throw new DoesExist();
+        } else if (err._code === 3) {
+          throw new ConstraintFailed();
         } else {
           console.log(err);
           throw new Error("[OneModel] Unexpected error in store: ");

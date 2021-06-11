@@ -21,7 +21,7 @@
   "author": "Philipp Uhl",
   "license": "UNLICENSED",
   "peerDependencies": {
-    "@apparts/db": "^2.1.1",
+    "@apparts/db": "^2.2.0",
     "@apparts/types": "^6.1.2"
   },
   "jest": {

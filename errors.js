@@ -14,9 +14,15 @@ function IsReference() {
   this.message = `[Model] Object is still reference`;
   this.toString = () => this.message;
 }
+function ConstraintFailed() {
+  this.message = `[Model] Object fails to meet constraints`;
+  this.toString = () => this.message;
+}
+
 module.exports = {
   NotUnique,
   NotFound,
   DoesExist,
   IsReference,
+  ConstraintFailed,
 };

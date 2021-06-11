@@ -171,6 +171,14 @@ describe("OneModel", () => {
     });
   });
 
+  test("insert constrained", async () => {
+    await expect(
+      new Model4(dbs, { userid: 1000, comment: "a" }).store()
+    ).rejects.toMatchObject({
+      message: "[Model] Object fails to meet constraints",
+    });
+  });
+
   test("delete of referenced fails", async () => {
     const m = await new Model(dbs, { test: 5 }).store();
     await new Model4(dbs, { userid: m.content.id }).store();
@@ -439,6 +447,14 @@ describe("ManyModel", () => {
     const newms = await new Models(dbs).load({ test: 1 });
 
     expect(newms.contents.length).toBe(0);
+  });
+
+  test("insert constrained", async () => {
+    await expect(
+      new Models4(dbs, [{ userid: 1000, comment: "a" }]).store()
+    ).rejects.toMatchObject({
+      message: "[Model] Object fails to meet constraints",
+    });
   });
 
   test("deleteAll of referenced fails", async () => {
