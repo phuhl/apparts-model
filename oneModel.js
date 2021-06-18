@@ -126,5 +126,9 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
     getPublic() {
       return this._getPublicWithTypes([this.content], this._types, true);
     }
+
+    async generateDerived() {
+      return this._generateDerived([this.content], this._types, true);
+    }
   };
 };

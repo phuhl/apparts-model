@@ -1,7 +1,5 @@
 "use strict";
 
-const { NotUnique, NotFound, DoesExist } = require("./errors");
-
 module.exports = (types, collection) => {
   // No idea why, but has to be here to be populated
   const type = require("@apparts/types");
@@ -14,11 +12,22 @@ module.exports = (types, collection) => {
       this._types = types;
       this._keys = Object.keys(types).filter((key) => types[key].key);
       this._autos = Object.keys(types).filter((key) => types[key].auto);
+      const storedValues = Object.keys(types).filter(
+        (key) =>
+          !types[key].auto &&
+          !types[key].derived &&
+          types[key].persisted !== false
+      );
       if (!types) {
         throw new Error("[AnyModel] No types given");
       }
       if (this._keys.length === 0) {
         throw new Error("[AnyModel] Types not well defined: No key found");
+      }
+      if (storedValues.length === 0) {
+        throw new Error(
+          "[AnyModel] Types not well defined: No stored, not generated key found"
+        );
       }
       if (!collection) {
         throw new Error("[AnyModel] No collection given");
@@ -33,7 +42,7 @@ module.exports = (types, collection) => {
     }
 
     _fillInDefaults(values) {
-      for (let key in this._types) {
+      for (const key in this._types) {
         if (typeof this._types[key].default === "function") {
           values = values.map((c) => ({
             ...c,
@@ -119,7 +128,7 @@ module.exports = (types, collection) => {
     }
 
     _convertIds(c) {
-      for (let key in this._types) {
+      for (const key in this._types) {
         if (!c[key]) {
           continue;
         }
@@ -141,6 +150,7 @@ module.exports = (types, collection) => {
           "[AnyModel] type-constraints not met: " + JSON.stringify(contents)
         );
       }
+
       const ids = await this._dbs
         .collection(this._collection)
         .insert(contents, this._autos, this._autos);
@@ -161,14 +171,14 @@ module.exports = (types, collection) => {
             continue;
           }
           let val = c[key];
-          if (this._types[key].derived) {
-            val = this._types[key].derived(c);
-          }
-          if (this._types[key].persisted === false) {
+          if (
+            this._types[key].derived ||
+            this._types[key].persisted === false
+          ) {
             delete c[key];
             continue;
           }
-          let present = val !== undefined && val !== null;
+          const present = val !== undefined && val !== null;
           if (
             (!present && !this._types[key].optional) ||
             (present && !type.types[this._types[key].type].check(val))
@@ -181,9 +191,23 @@ module.exports = (types, collection) => {
       return true;
     }
 
+    async _generateDerived(contents, types) {
+      this._derived = await Promise.all(
+        contents.map(async (c) => {
+          const ret = {};
+          for (const key in types) {
+            if (types[key].derived) {
+              ret[key] = await types[key].derived(c);
+            }
+          }
+          return ret;
+        })
+      );
+    }
+
     _getPublicWithTypes(contents, types, single) {
       let hasName = false;
-      for (let key in types) {
+      for (const key in types) {
         if (types[key].name) {
           if (hasName) {
             throw new Error("[AnyModel] Multiple Names specified");
@@ -196,12 +220,18 @@ module.exports = (types, collection) => {
       if (!hasName) {
         retObj = [];
       }
-      for (let c of contents) {
-        let obj = {};
-        for (let key in types) {
+      let counter = 0;
+      for (const c of contents) {
+        const obj = {};
+        for (const key in types) {
           let val = c[key];
           if (types[key].derived) {
-            val = types[key].derived(c);
+            if (!this._derived) {
+              throw new Error(
+                "[AnyModel] getPublic called without generating derived first."
+              );
+            }
+            val = this._derived[counter][key];
           }
           if (types[key].public && val !== undefined && val !== null) {
             if (types[key].mapped) {
@@ -222,6 +252,7 @@ module.exports = (types, collection) => {
         if (!hasName) {
           retObj.push(obj);
         }
+        counter++;
       }
       if (single) {
         if (!hasName) {

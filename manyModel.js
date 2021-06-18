@@ -1,12 +1,6 @@
 "use strict";
 
-const {
-  NotUnique,
-  NotFound,
-  DoesExist,
-  IsReference,
-  ConstraintFailed,
-} = require("./errors");
+const { NotUnique, IsReference, ConstraintFailed } = require("./errors");
 const useAnyModel = require("./anyModel");
 
 module.exports = (types, collection) => {
@@ -36,7 +30,7 @@ module.exports = (types, collection) => {
 
     async loadByIds(ids, limit, offset) {
       if (!Array.isArray(ids)) {
-        let req = {};
+        const req = {};
         if (Object.keys(ids).length !== this._keys.length) {
           throw new Error(`[ManyModel] loadByIds not all keys given, E50.
 Collection: "${this._collection}", Keys: "${JSON.stringify(
@@ -136,6 +130,10 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
 
     getPublic() {
       return this._getPublicWithTypes(this.contents, this._types, false);
+    }
+
+    async generateDerived() {
+      return this._generateDerived(this.contents, this._types, true);
     }
   };
 };

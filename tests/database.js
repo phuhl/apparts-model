@@ -13,7 +13,11 @@ const setup = async (schemas, setupSql, dbName) => {
     // Can happen, not a problem
   }
   await createOrDropDatabase("CREATE", DB_CONFIG.postgresql, dbName);
-  const tempDBConfig = { ...DB_CONFIG.postgresql, database: dbName };
+  const tempDBConfig = {
+    ...DB_CONFIG.postgresql,
+    db: dbName,
+    database: dbName,
+  };
   const pool = new Client(tempDBConfig);
   await pool.connect();
   for (const schema of schemas) {
@@ -30,7 +34,7 @@ const setup = async (schemas, setupSql, dbName) => {
         console.log("DB ERROR");
         throw e;
       }
-      console.log("Connected to DB");
+      console.log("Connected to DB " + dbName);
       res(dbs);
     });
   });
