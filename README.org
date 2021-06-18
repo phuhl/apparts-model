@@ -28,6 +28,18 @@ these classes by using them:
       /* This field can be NULL */
       optional: true  
     },
+    derivedValue: {
+      type: "string",
+      public: true,
+      /* This field will not be persisted. It's value is derived from
+         other values and will be generated on the fly. When using the
+         getPublic method, while having derived values, you must first
+         call generateDerived. */
+      derived: async (c, model) => {
+        /* c is the content of the model, model is the whole Model object */
+        return (await model._dbs._getSomeRelation()).text;
+      }
+    },
     createdOn: { 
       type: "time", 
       /* This field will be set to the functions result, if the field is
@@ -121,7 +133,11 @@ _Functions:_
   database. If any of the items is referenced by another item,
   =IsReference= will be thrown.
 - ~getPublic()~ :: Get the public representation (marked as public in
-  the types definition by the key ~public (bool)~).
+  the types definition by the key ~public (bool)~). If there are derived
+  values in the type, =generateDerived= must be called first!
+- =async generateDerived()= :: Generate derived values. The derived
+  values will be saved in =_derived=. This function must be called
+  before =getPublic= is called, if derived values exist in the type.
 - =static getTypes()= :: Returns the type of the model
 
 ** OneModel
@@ -146,7 +162,11 @@ _Functions:_
 - ~async delete()~ :: Delete this element from the database. If the item
   is referenced by another item, =IsReference= will be thrown.
 - ~getPublic()~ :: Get the public representation (marked as public in
-  the types definition by the key ~public (bool)~).
+  the types definition by the key ~public (bool)~). If there are derived
+  values in the type, =generateDerived= must be called first!
+- =async generateDerived()= :: Generate derived values. The derived
+  values will be saved in =_derived=. This function must be called
+  before =getPublic= is called, if derived values exist in the type.
 - =static getTypes()= :: Returns the type of the model
 
 ** NoneModel

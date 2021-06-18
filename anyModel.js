@@ -165,12 +165,12 @@ module.exports = (types, collection) => {
     }
 
     _checkTypes(contents) {
-      for (let c of contents) {
-        for (let key in this._types) {
+      for (const c of contents) {
+        for (const key in this._types) {
           if (this._autos.indexOf(key) !== -1) {
             continue;
           }
-          let val = c[key];
+          const val = c[key];
           if (
             this._types[key].derived ||
             this._types[key].persisted === false
@@ -197,7 +197,7 @@ module.exports = (types, collection) => {
           const ret = {};
           for (const key in types) {
             if (types[key].derived) {
-              ret[key] = await types[key].derived(c);
+              ret[key] = await types[key].derived(c, this);
             }
           }
           return ret;
