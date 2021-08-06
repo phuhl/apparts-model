@@ -1,9 +1,7 @@
 "use strict";
+const { checkType } = require("@apparts/types");
 
 module.exports = (types, collection) => {
-  // No idea why, but has to be here to be populated
-  const type = require("@apparts/types");
-
   return class AnyModel {
     constructor(dbs) {
       this._dbs = dbs;
@@ -181,7 +179,7 @@ module.exports = (types, collection) => {
           const present = val !== undefined && val !== null;
           if (
             (!present && !this._types[key].optional) ||
-            (present && !type.types[this._types[key].type].check(val))
+            (present && !checkType(val, this._types[key]))
           ) {
             console.log(key, val);
             return false;
