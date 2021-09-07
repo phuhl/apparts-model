@@ -93,12 +93,17 @@ describe("ManyModel", () => {
   });
 
   test("creation of many", async () => {
-    const m = new Models(dbs, [{ test: 1 }, { test: 2 }]);
+    const m = new Models(dbs, [{ test: 1 }, { test: 2, a: 3 }]);
     await expect(m.store()).resolves.toBe(m);
     const [{ id: id1 }, { id: id2 }] = m.contents;
     expect(m.contents).toMatchObject([
       { test: 1, id: id1 },
-      { test: 2, id: id2 },
+      { test: 2, id: id2, a: 3 },
+    ]);
+    const saved = await new Models(dbs).load({});
+    expect(saved.contents).toStrictEqual([
+      { test: 1, id: id1, a: null },
+      { test: 2, id: id2, a: 3 },
     ]);
   });
 
@@ -114,9 +119,8 @@ describe("ManyModel", () => {
   test("update", async () => {
     const ms = new Models(dbs);
 
-    const { id: id1 } = (
-      await new Model(dbs, { test: 10, a: 4 }).store()
-    ).content;
+    const { id: id1 } = (await new Model(dbs, { test: 10, a: 4 }).store())
+      .content;
     const [{ id: id2 }, { id: id3 }] = (
       await new Models(dbs, [
         { test: 11, a: 4 },
@@ -136,9 +140,8 @@ describe("ManyModel", () => {
   });
 
   test("update fails, keys changed", async () => {
-    const { id: id1 } = (
-      await new Model(dbs, { test: 10, a: 4000 }).store()
-    ).content;
+    const { id: id1 } = (await new Model(dbs, { test: 10, a: 4000 }).store())
+      .content;
     const [{ id: id2 }, { id: id3 }] = (
       await new Models(dbs, [
         { test: 11, a: 4000 },
@@ -161,9 +164,8 @@ describe("ManyModel", () => {
   });
 
   test("update fails, length of content changed", async () => {
-    const { id: id1 } = (
-      await new Model(dbs, { test: 10, a: 4001 }).store()
-    ).content;
+    const { id: id1 } = (await new Model(dbs, { test: 10, a: 4001 }).store())
+      .content;
     const [{ id: id2 }, { id: id3 }] = (
       await new Models(dbs, [
         { test: 11, a: 4001 },
@@ -186,9 +188,8 @@ describe("ManyModel", () => {
   });
 
   test("update fails, content does not fit schema", async () => {
-    const { id: id1 } = (
-      await new Model(dbs, { test: 10, a: 4002 }).store()
-    ).content;
+    const { id: id1 } = (await new Model(dbs, { test: 10, a: 4002 }).store())
+      .content;
     const [{ id: id2 }, { id: id3 }] = (
       await new Models(dbs, [
         { test: 11, a: 4002 },
@@ -409,7 +410,9 @@ Collection: "users2", Keys: "["id","test"]", Id: "{"id":[${m1.content.id}]}"`,
     const m1 = await new Models3(dbs).load({ email: "test1@test.de" });
     await expect(m1.deleteAll()).resolves.toBe(m1);
     await expect(
-      (await new Models3(dbs).load({ email: "test1@test.de" })).contents.length
+      (
+        await new Models3(dbs).load({ email: "test1@test.de" })
+      ).contents.length
     ).toBe(0);
   });
 

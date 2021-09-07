@@ -184,6 +184,9 @@ module.exports = (types, collection) => {
             console.log(key, val);
             return false;
           }
+          if (!present) {
+            c[key] = null;
+          }
         }
       }
       return true;
