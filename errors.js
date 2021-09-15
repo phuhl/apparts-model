@@ -18,7 +18,6 @@ const buildErrorMessage = (more = {}) =>
     .join("\n");
 
 function NotUnique(name, more) {
-  if (!name) throw "No Name";
   this.message = `[Model] Object not unique`;
   this.collection = name;
   this.moreInfo = buildErrorMessage(more);
@@ -26,7 +25,6 @@ function NotUnique(name, more) {
     `${this.message}\nCollection: ${this.collection}\n${this.moreInfo}`;
 }
 function NotFound(name, loadFilter) {
-  if (!name) throw "No Name";
   this.message = `[Model] Object not found`;
   this.collection = name;
   this.moreInfo = buildErrorMessage({ loadFilter });
@@ -34,7 +32,6 @@ function NotFound(name, loadFilter) {
     `${this.message}\nCollection: ${this.collection}\n${this.moreInfo}`;
 }
 function DoesExist(name, more) {
-  if (!name) throw "No Name";
   this.message = `[Model] Object does exist`;
   this.collection = name;
   this.moreInfo = buildErrorMessage(more);
@@ -42,7 +39,6 @@ function DoesExist(name, more) {
     `${this.message}\nCollection: ${this.collection}\n${this.moreInfo}`;
 }
 function IsReference(name, loadFilter) {
-  if (!name) throw "No Name";
   this.message = `[Model] Object is still reference`;
   this.collection = name;
   this.moreInfo = buildErrorMessage({
@@ -52,7 +48,6 @@ function IsReference(name, loadFilter) {
     `${this.message}\nCollection: ${this.collection}\n${this.moreInfo}`;
 }
 function ConstraintFailed(name, newObject) {
-  if (!name) throw "No Name";
   this.message = `[Model] Object fails to meet constraints`;
   this.collection = name;
   this.moreInfo = buildErrorMessage({
