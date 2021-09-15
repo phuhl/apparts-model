@@ -150,7 +150,8 @@ _Functions:_
 - ~constructor(dbs, ?content)~ :: Constructor, when used via =use<Name>()=.
 - ~constructor(?content)~ :: Constructor, when used via =use<Name>(dbs)=.
 - ~async load(filter)~ :: Load one item. If more than one item was found
-  that satisfies the filter, a =NotUnique= error will be thrown. The filter grammar
+  that satisfies the filter, a =NotUnique= error will be thrown. If no item
+  was found, a =NotFound= error will be thrown. The filter grammar
   is as defined by the =find= function of the =dbs=. For more information,
   see below at in the section "Filter Grammar".
 - ~async loadById(id)~ :: Load data by ID. For models with
