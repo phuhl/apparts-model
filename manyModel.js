@@ -77,9 +77,11 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
       } catch (err) {
         // MONGO
         if (err._code === 1) {
-          throw new NotUnique();
+          throw new NotUnique(this._collection, {
+            triedToStore: this.contents,
+          });
         } else if (err._code === 3) {
-          throw new ConstraintFailed();
+          throw new ConstraintFailed(this._collection, this.contents);
         } else {
           console.log(err);
           throw new Error("[OneModel] Unexpected error in store: ");
@@ -119,7 +121,7 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
         await this._dbs.collection(this._collection).remove(filter);
       } catch (err) {
         if (err._code === 2) {
-          throw new IsReference();
+          throw new IsReference(this._collection, this.contents);
         } else {
           console.log(err);
           throw new Error("[OneModel] Unexpected error in store: ");

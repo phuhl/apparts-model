@@ -27,17 +27,18 @@ module.exports = (types, collection) => {
 
     async load(filter) {
       await this._loadOne(
-        this._dbs.collection(this._collection).find(filter, 2)
+        this._dbs.collection(this._collection).find(filter, 2),
+        filter
       );
       return this;
     }
 
-    async _loadOne(f) {
+    async _loadOne(f, filter) {
       const [content, something] = await this._load(f);
       if (something) {
-        throw new NotUnique();
+        throw new NotUnique(this._collection, filter, content, something);
       } else if (!content) {
-        throw new NotFound();
+        throw new NotFound(this._collection, filter);
       }
       this.content = content;
     }
@@ -59,7 +60,8 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
           }
         });
         await this._loadOne(
-          this._dbs.collection(this._collection).findById(req)
+          this._dbs.collection(this._collection).findById(req),
+          id
         );
       } else {
         if (this._keys.length > 1) {
@@ -71,7 +73,8 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
         await this._loadOne(
           this._dbs
             .collection(this._collection)
-            .findById({ [this._keys[0]]: this._dbs.toId(id) })
+            .findById({ [this._keys[0]]: this._dbs.toId(id) }),
+          id
         );
       }
       return this;
@@ -85,9 +88,9 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
       } catch (err) {
         // MONGO
         if (err._code === 1) {
-          throw new DoesExist();
+          throw new DoesExist(this._collection, { triedToStore: this.content });
         } else if (err._code === 3) {
-          throw new ConstraintFailed();
+          throw new ConstraintFailed(this._collection, this.content);
         } else {
           console.log(err);
           throw new Error("[OneModel] Unexpected error in store: ");
@@ -114,7 +117,7 @@ Collection: "${this._collection}", Keys: "${JSON.stringify(
       } catch (err) {
         console.log("IN MODEL", err);
         if (err._code === 2) {
-          throw new IsReference();
+          throw new IsReference(this._collection, this.content);
         } else {
           console.log(err);
           throw new Error("[OneModel] Unexpected error in store: ");

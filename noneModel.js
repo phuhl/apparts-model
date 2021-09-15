@@ -16,7 +16,10 @@ module.exports = (types, collection) => {
         this._dbs.collection(this._collection).find(filter, 2)
       );
       if (contents.length > 0) {
-        throw new DoesExist();
+        throw new DoesExist(this._collection, {
+          shouldNotExist: filter,
+          butDoes: contents,
+        });
       }
       return this;
     }

@@ -1,22 +1,65 @@
-function NotUnique() {
+function safeStringify(value) {
+  const seen = new Set();
+  return JSON.stringify(value, (k, v) => {
+    if (seen.has(v)) {
+      return "...";
+    }
+    if (typeof v === "object") {
+      seen.add(v);
+    }
+    return v;
+  });
+}
+
+const buildErrorMessage = (more = {}) =>
+  Object.keys(more)
+    .filter((key) => more[key])
+    .map((key) => key + ": " + safeStringify(more[key]))
+    .join("\n");
+
+function NotUnique(name, more) {
+  if (!name) throw "No Name";
   this.message = `[Model] Object not unique`;
-  this.toString = () => this.message;
+  this.collection = name;
+  this.moreInfo = buildErrorMessage(more);
+  this.toString = () =>
+    `${this.message}\nCollection: ${this.collection}\n${this.moreInfo}`;
 }
-function NotFound() {
+function NotFound(name, loadFilter) {
+  if (!name) throw "No Name";
   this.message = `[Model] Object not found`;
-  this.toString = () => this.message;
+  this.collection = name;
+  this.moreInfo = buildErrorMessage({ loadFilter });
+  this.toString = () =>
+    `${this.message}\nCollection: ${this.collection}\n${this.moreInfo}`;
 }
-function DoesExist() {
+function DoesExist(name, more) {
+  if (!name) throw "No Name";
   this.message = `[Model] Object does exist`;
-  this.toString = () => this.message;
+  this.collection = name;
+  this.moreInfo = buildErrorMessage(more);
+  this.toString = () =>
+    `${this.message}\nCollection: ${this.collection}\n${this.moreInfo}`;
 }
-function IsReference() {
+function IsReference(name, loadFilter) {
+  if (!name) throw "No Name";
   this.message = `[Model] Object is still reference`;
-  this.toString = () => this.message;
+  this.collection = name;
+  this.moreInfo = buildErrorMessage({
+    loadFilter,
+  });
+  this.toString = () =>
+    `${this.message}\nCollection: ${this.collection}\n${this.moreInfo}`;
 }
-function ConstraintFailed() {
+function ConstraintFailed(name, newObject) {
+  if (!name) throw "No Name";
   this.message = `[Model] Object fails to meet constraints`;
-  this.toString = () => this.message;
+  this.collection = name;
+  this.moreInfo = buildErrorMessage({
+    newObj: newObject,
+  });
+  this.toString = () =>
+    `${this.message}\nCollection: ${this.collection}\n${this.moreInfo}`;
 }
 
 module.exports = {
